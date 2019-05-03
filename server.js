@@ -63,9 +63,9 @@ function queryTable(table, request, response) {
   let values = [request.query.data.search_query];
   return client.query(sql, values)
     .then(result => {
-      console.log(result);
+      //console.log(result);
       if (result.rowCount > 0) {
-        console.log(result.rowCount);
+        //console.log(result.rowCount);
         response.send(result.rows);
       } else {
         if (table === 'weathers') {
@@ -102,6 +102,11 @@ function getWeatherAPI(req, res) {
 function eventsApp(req, res) {
   queryTable('events', req, res);
 }
+/*
+function moviesApp(req, res){
+  queryTable('movies',req, res);
+}
+*/
 
 function getEventsAPI(req, res) {
   const eventBriteUrl = `https://www.eventbriteapi.com/v3/events/search/?location.within=10mi&location.latitude=${req.query.data.latitude}&location.longitude=${req.query.data.longitude}&token=${process.env.EVENTBRITE_API_KEY}`;
@@ -120,22 +125,21 @@ function getEventsAPI(req, res) {
 }
 
 function getMoviesAPI(req, res) {
-  console.log('----------------IN THE MOVIES API YAY!!!!');
   const moviesUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${req.query.data.search_query}`;
 
   return superagent.get(moviesUrl)
     .then(result => {
+      console.log('----------------INSIDE MOVIE REQUEST!!!!!-----------');
+      const movieList = result.body.results.map(movie => {
+        const movieItem = new Movie(movie);
 
-      console.log('----------------MOVIES!!!!!!----------------');
-      console.log(result.body.results);
+        const SQL = `INSERT INTO movies (title, overview, average_votes, total_votes, image_url, popularity, released_on) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+        const values = [movieItem.title, movieItem.overview, movieItem.average_votes, movieItem.total_votes, movieItem.image_url, movieItem.popularity, movieItem.released_on];
 
-        const movieList = result.body.result.map(key => {
-        const movieItem = new (event, req.query.data.search_query);
-        const SQL = `INSERT INTO events (link, name, event_date, summary, location) VALUES ($1, $2, $3, $4, $5);`;
-        const values = [event.url, event.name.text, event.start.local, event.description.text, eventItem.location];
         client.query(SQL, values);
-        return eventItem;
+        return movieItem;
       });
+      console.log(movieList);
       res.send(movieList);
     })
     .catch(error => handleError(error, res));
