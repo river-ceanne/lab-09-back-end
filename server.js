@@ -85,10 +85,6 @@ function queryTable(table, request, response) {
     .catch(error => handleError(error, response));
 }
 
-function weatherApp(req, res) {
-  queryTable('weathers', req, res);
-}
-
 function getWeatherAPI(req, res) {
   const darkSkyUrl = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
   return superagent.get(darkSkyUrl)
@@ -108,6 +104,18 @@ function getWeatherAPI(req, res) {
 
 function eventsApp(req, res) {
   queryTable('events', req, res);
+}
+
+function weatherApp(req, res) {
+  queryTable('weathers', req, res);
+}
+
+function moviesApp(req,res){
+  queryTable('movies', req, res);
+}
+
+function yelpApp(req,res){
+  queryTable('yelps', req, res);
 }
 
 function getEventsAPI(req, res) {
@@ -152,10 +160,10 @@ function getYelpAPI(req, res) {
     .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
     .then(result => {
       const yelpList = result.body.businesses.map(yelp => {
-        const yelpItem = new Yelp(yelp);
+        const yelpItem = new Yelp(yelp,req.query.data.search_query);
 
-        const SQL = `INSERT INTO yelps (name, image_url, price, rating, url, created_at) VALUES ($1, $2, $3, $4, $5, $6);`;
-        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at];
+        const SQL = `INSERT INTO yelps (name, image_url, price, rating, url, created_at, location) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at, yelpItem.location];
 
         client.query(SQL, values);
         // console.log(yelpItem.name);
