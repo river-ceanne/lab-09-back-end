@@ -129,7 +129,6 @@ function Weather(day, location) {
   this.created_at = Date.now();
 }
 
-//Refactored to pass more concise arguments
 function Location(request, result) {
   this.search_query = request.query.data;
   this.formatted_query = result.body.results[0].formatted_address;
@@ -144,6 +143,24 @@ function Event(data, location) {
   this.event_date = new Date(data.start.local).toDateString();
   this.summary = data.description.text;
   this.created_at = Date.now();
+}
+
+function Movie(movie){
+  this.title = movie.title;
+  this.overview = movie.overview;
+  this.average_votes = movie.vote_average;
+  this.total_votes = movie.vote_count;
+  this.image_url = `http://image.tmdb.org/t/p/w185/${movie.poster_path}`;
+  this.popularity = movie.popularity;
+  this.released_on = movie.release_date;
+}
+
+function Yelp(yelp){
+  this.name = yelp.name;
+  this.image_url = yelp.image_url;
+  this.price = yelp.price;
+  this.rating = yelp.rating;
+  this.url = yelp.url;
 }
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
