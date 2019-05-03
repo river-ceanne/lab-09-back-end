@@ -49,12 +49,12 @@ CREATE TABLE IF NOT EXISTS movies (
 
 CREATE TABLE IF NOT EXISTS yelps (
   id SERIAL PRIMARY KEY,
-  name TEXT,
-  image_url TEXT,
-  price TEXT,
-  rating TEXT,
-  url TEXT,
+  name VARCHAR(255),
+  image_url VARCHAR(255),
+  price VARCHAR(50),
+  rating DECIMAL,
+  url VARCHAR(255),
   location_id INTEGER,
-  location TEXT,
-  created_at TEXT
+  location VARCHAR(255),
+  created_at BIGINT
 );
