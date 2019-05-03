@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS events (
 CREATE TABLE IF NOT EXISTS movies (
   id SERIAL PRIMARY KEY,
   title VARCHAR(255),
-  overview VARCHAR(255),
+  overview TEXT,
   average_votes DECIMAL,
   total_votes INTEGER,
   image_url VARCHAR(255),
@@ -49,12 +49,12 @@ CREATE TABLE IF NOT EXISTS movies (
 
 CREATE TABLE IF NOT EXISTS yelps (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(255),
-  image_url VARCHAR(255),
-  price VARCHAR(255),
+  name TEXT,
+  image_url TEXT,
+  price TEXT,
   rating TEXT,
-  url VARCHAR(255),
+  url TEXT,
   location_id INTEGER,
-  location VARCHAR(255),
-  created_at BIGINT
+  location TEXT,
+  created_at TEXT
 );

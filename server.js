@@ -25,6 +25,7 @@ app.get('/weather', weatherApp);
 
 app.get('/events', eventsApp);
 app.get('/movies', getMoviesAPI);
+app.get('/yelp', getYelpAPI);
 
 //uses google API to fetch coordinate data to send to front end using superagent
 //has a catch method to handle bad user search inputs in case google maps cannot
@@ -34,8 +35,8 @@ function locationApp(request, response) {
   return superagent.get(googleMapsUrl)
     .then(result => {
       const location = new Location(request, result);
-      let insertSQL = 'INSERT INTO locations ( search_query, formatted_query, latitude, longitude ) VALUES ( $1, $2, $3, $4 );';
-      let insertParams = [location.search_query, location.formatted_query, location.latitude, location.longitude];
+      let insertSQL = 'INSERT INTO locations ( search_query, formatted_query, latitude, longitude, created_at ) VALUES ( $1, $2, $3, $4, $5 );';
+      let insertParams = [location.search_query, location.formatted_query, location.latitude, location.longitude, location.createdAt];
       client.query(insertSQL, insertParams);
       // return location;
       response.send(location);
@@ -89,8 +90,8 @@ function getWeatherAPI(req, res) {
       //make map one liner
       const weatherSummaries = result.body.daily.data.map(data => {
         const day = new Weather(data, req.query.data.search_query);
-        const SQL = `INSERT INTO weathers (forecast, time, location) VALUES ($1, $2, $3);`;
-        const values = [data.summary, day.time, day.location];
+        const SQL = `INSERT INTO weathers (forecast, time, location, created_at) VALUES ($1, $2, $3, $4);`;
+        const values = [data.summary, day.time, day.location, day.createdAt];
         client.query(SQL, values);
         return day;
       });
@@ -102,11 +103,6 @@ function getWeatherAPI(req, res) {
 function eventsApp(req, res) {
   queryTable('events', req, res);
 }
-/*
-function moviesApp(req, res){
-  queryTable('movies',req, res);
-}
-*/
 
 function getEventsAPI(req, res) {
   const eventBriteUrl = `https://www.eventbriteapi.com/v3/events/search/?location.within=10mi&location.latitude=${req.query.data.latitude}&location.longitude=${req.query.data.longitude}&token=${process.env.EVENTBRITE_API_KEY}`;
@@ -114,8 +110,8 @@ function getEventsAPI(req, res) {
     .then(result => {
       const eventSummaries = result.body.events.map(event => {
         const eventItem = new Event(event, req.query.data.search_query);
-        const SQL = `INSERT INTO events (link, name, event_date, summary, location) VALUES ($1, $2, $3, $4, $5);`;
-        const values = [event.url, event.name.text, event.start.local, event.description.text, eventItem.location];
+        const SQL = `INSERT INTO events (link, name, event_date, summary, location, created_at) VALUES ($1, $2, $3, $4, $5, $6);`;
+        const values = [event.url, event.name.text, event.start.local, event.description.text, eventItem.location, event.createdAt];
         client.query(SQL, values);
         return eventItem;
       });
@@ -129,18 +125,37 @@ function getMoviesAPI(req, res) {
 
   return superagent.get(moviesUrl)
     .then(result => {
-      console.log('----------------INSIDE MOVIE REQUEST!!!!!-----------');
       const movieList = result.body.results.map(movie => {
         const movieItem = new Movie(movie);
 
-        const SQL = `INSERT INTO movies (title, overview, average_votes, total_votes, image_url, popularity, released_on) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
-        const values = [movieItem.title, movieItem.overview, movieItem.average_votes, movieItem.total_votes, movieItem.image_url, movieItem.popularity, movieItem.released_on];
+        const SQL = `INSERT INTO movies (title, overview, average_votes, total_votes, image_url, popularity, released_on, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`;
+        const values = [movieItem.title, movieItem.overview, movieItem.average_votes, movieItem.total_votes, movieItem.image_url, movieItem.popularity, movieItem.released_on, movie.createdAt];
 
         client.query(SQL, values);
         return movieItem;
       });
-      console.log(movieList);
       res.send(movieList);
+    })
+    .catch(error => handleError(error, res));
+}
+
+function getYelpAPI(req, res) {
+  const yelpUrl = `https://api.yelp.com/v3/businesses/search?latitude=${req.query.data.latitude}&longitude=${req.query.data.longitude}`;
+
+  return superagent.get(yelpUrl)
+    .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+    .then(result => {
+      const yelpList = result.body.businesses.map(yelp => {
+        const yelpItem = new Yelp(yelp);
+
+        const SQL = `INSERT INTO yelps (name, image_url, price, rating, url, created_at) VALUES ($1, $2, $3, $4, $5, $6);`;
+        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at];
+
+        client.query(SQL, values);
+        // console.log(yelpItem.name);
+        return yelpItem;
+      });
+      res.send(yelpList);
     })
     .catch(error => handleError(error, res));
 }
@@ -168,7 +183,7 @@ function Event(data, location) {
   this.link = data.url;
   this.name = data.name.text;
   this.event_date = new Date(data.start.local).toDateString();
-  this.summary = data.description.text;
+  this.summary = data.summary;
   this.created_at = Date.now();
 }
 
