@@ -24,8 +24,8 @@ app.get('/location', queryLocation);
 app.get('/weather', weatherApp);
 
 app.get('/events', eventsApp);
-app.get('/movies', getMoviesAPI);
-app.get('/yelp', getYelpAPI);
+app.get('/movies', moviesApp);
+app.get('/yelp', yelpApp);
 
 //uses google API to fetch coordinate data to send to front end using superagent
 //has a catch method to handle bad user search inputs in case google maps cannot
@@ -75,14 +75,24 @@ function queryTable(table, request, response) {
       if (result.rowCount > 0) {
         response.send(result.rows);
       } else {
-        if (table === 'weathers') {
-          getWeatherAPI(request, response);
-        } else if (table === 'events') {
-          getEventsAPI(request, response);
-        }
+        callAPI(table, request, response);
       }
     })
     .catch(error => handleError(error, response));
+}
+
+function callAPI(table,request, response){
+  switch(table){
+  case 'weathers':
+    return getWeatherAPI(request, response);
+  case 'events':
+    return getEventsAPI(request, response);
+  case 'movies':
+    return getMoviesAPI(request,response);
+  case 'yelps':
+    return getYelpAPI(request,response);
+  }
+
 }
 
 function getWeatherAPI(req, res) {
