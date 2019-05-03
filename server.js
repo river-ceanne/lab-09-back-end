@@ -180,6 +180,7 @@ function Movie(movie){
   this.image_url = `http://image.tmdb.org/t/p/w185/${movie.poster_path}`;
   this.popularity = movie.popularity;
   this.released_on = movie.release_date;
+  this.created_at = Date.now();
 }
 
 function Yelp(yelp){
@@ -188,6 +189,7 @@ function Yelp(yelp){
   this.price = yelp.price;
   this.rating = yelp.rating;
   this.url = yelp.url;
+  this.created_at = Date.now();
 }
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));

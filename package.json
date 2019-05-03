@@ -19,7 +19,14 @@
   "homepage": "https://github.com/river-ceanne/lab-09-back-end#readme",
   "dependencies": {
     "cors": "^2.8.5",
+<<<<<<< Updated upstream
     "express": "^4.16.4",
     "pg": "^7.10.0"
+=======
+    "dotenv": "^8.0.0",
+    "express": "^4.16.4",
+    "pg": "^7.10.0",
+    "superagent": "^5.0.5"
+>>>>>>> Stashed changes
   }
 }
