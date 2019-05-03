@@ -25,7 +25,7 @@ app.get('/weather', weatherApp);
 
 app.get('/events', eventsApp);
 app.get('/movies', getMoviesAPI);
-//app.get('/yelp',getYelpAPI);
+app.get('/yelp', getYelpAPI);
 
 //uses google API to fetch coordinate data to send to front end using superagent
 //has a catch method to handle bad user search inputs in case google maps cannot
@@ -109,11 +109,6 @@ function getWeatherAPI(req, res) {
 function eventsApp(req, res) {
   queryTable('events', req, res);
 }
-/*
-function moviesApp(req, res){
-  queryTable('movies',req, res);
-}
-*/
 
 function getEventsAPI(req, res) {
   const eventBriteUrl = `https://www.eventbriteapi.com/v3/events/search/?location.within=10mi&location.latitude=${req.query.data.latitude}&location.longitude=${req.query.data.longitude}&token=${process.env.EVENTBRITE_API_KEY}`;
@@ -136,7 +131,6 @@ function getMoviesAPI(req, res) {
 
   return superagent.get(moviesUrl)
     .then(result => {
-      console.log('----------------INSIDE MOVIE REQUEST!!!!!-----------');
       const movieList = result.body.results.map(movie => {
         const movieItem = new Movie(movie, req.query.data.search_query);
 
@@ -146,30 +140,28 @@ function getMoviesAPI(req, res) {
         client.query(SQL, values);
         return movieItem;
       });
-      console.log(movieList);
       res.send(movieList);
     })
     .catch(error => handleError(error, res));
 }
 
 function getYelpAPI(req, res) {
-  console.log('----------------INSIDE GET-YELPS REQUEST!!!!!-----------');
-  const yelpsUrl = `https://api.yelp.com/v3/businesses/search?latitude=${myLocation.latitude}&longitude=${myLocation.longitude}&token=${process.env.YELP_API_KEY}`;
+  const yelpUrl = `https://api.yelp.com/v3/businesses/search?latitude=${req.query.data.latitude}&longitude=${req.query.data.longitude}`;
 
-  return superagent.get(yelpsUrl)
+  return superagent.get(yelpUrl)
+    .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
     .then(result => {
-      console.log('----------------INSIDE SUPERAGENT YELPS REQUEST!!!!!-----------');
-      const yelpsList = result.body.results.map(yelp => {
-        const yelpItem = new Yelp(yelp, req.query.data.search_query);
+      const yelpList = result.body.businesses.map(yelp => {
+        const yelpItem = new Yelp(yelp);
 
-        const SQL = `INSERT INTO yelps (name,image_url,price,rating,url, created_at, location) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
-        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at, yelpItem.location];
+        const SQL = `INSERT INTO yelps (name, image_url, price, rating, url, created_at) VALUES ($1, $2, $3, $4, $5, $6);`;
+        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at];
 
         client.query(SQL, values);
+        // console.log(yelpItem.name);
         return yelpItem;
       });
-      console.log(yelpsList);
-      res.send(yelpsList);
+      res.send(yelpList);
     })
     .catch(error => handleError(error, res));
 }
@@ -198,7 +190,7 @@ function Event(data, location) {
   this.link = data.url;
   this.name = data.name.text;
   this.event_date = new Date(data.start.local).toDateString();
-  this.summary = data.description.text;
+  this.summary = data.summary;
   this.created_at = Date.now();
 }
 
