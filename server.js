@@ -41,7 +41,6 @@ function locationApp(request, response) {
       let insertSQL = 'INSERT INTO locations ( search_query, formatted_query, latitude, longitude, created_at) VALUES ( $1, $2, $3, $4, $5);';
       let insertParams = [myLocation.search_query, myLocation.formatted_query, myLocation.latitude, myLocation.longitude, myLocation.created_at];
       client.query(insertSQL, insertParams);
-      // return location;
       response.send(myLocation);
     })
     .catch(error => handleError(error, response));
@@ -54,11 +53,7 @@ function queryLocation(request, response) {
   return client.query(sql, params)
     .then(result => {
       if (result.rowCount > 0) {
-        let qryResult = result.rows[0];
-        myLocation = new Location();
-        myLocation.latitude = qryResult.latitude;
-        myLocation.longitude = qryResult.longitude;
-        response.send(qryResult);
+        response.send(result.rows[0]);
       } else {
         locationApp(request, response);
       }
@@ -72,12 +67,29 @@ function queryTable(table, request, response) {
   return client.query(sql, values)
     .then(result => {
       //console.log(result);
+      console.log(`${table} # rows are `, result.rowCount);
       if (result.rowCount > 0) {
-        response.send(result.rows);
+        let qryResult = result.rows;
+        let dateOnDB = qryResult[0].created_at;
+        console.log(qryResult[0].created_at);
+        console.log(Date.now() - dateOnDB);
+        if(Date.now() - dateOnDB > cacheTimes[table]){
+          refreshData(table,request,response);
+        }
+        response.send(qryResult);
       } else {
         callAPI(table, request, response);
       }
     })
+    .catch(error => handleError(error, response));
+}
+
+function refreshData(table,request,response){
+  console.log('-------REFRESHING DATA ------------');
+  let sql = `DELETE FROM ${table} WHERE location = $1`;
+  let values = [request.query.data.search_query];
+  return client.query(sql,values)
+    .then(() => callAPI(table,request,response))
     .catch(error => handleError(error, response));
 }
 
@@ -233,5 +245,13 @@ function Yelp(yelp, location){
   this.created_at = Date.now();
   this.location = location;
 }
+
+const cacheTimes = {
+  weathers: 20 * 1000,
+  locations: 60 * 1000,
+  events: 40 * 1000,
+  movies: 50 * 1000,
+  yelp: 30 * 1000
+};
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
