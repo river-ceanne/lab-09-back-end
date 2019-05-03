@@ -24,6 +24,7 @@ app.get('/location', queryLocation);
 app.get('/weather', weatherApp);
 
 app.get('/events', eventsApp);
+app.get('/movies', getMoviesAPI);
 
 //uses google API to fetch coordinate data to send to front end using superagent
 //has a catch method to handle bad user search inputs in case google maps cannot
@@ -114,6 +115,28 @@ function getEventsAPI(req, res) {
         return eventItem;
       });
       res.send(eventSummaries);
+    })
+    .catch(error => handleError(error, res));
+}
+
+function getMoviesAPI(req, res) {
+  console.log('----------------IN THE MOVIES API YAY!!!!');
+  const moviesUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${req.query.data.search_query}`;
+
+  return superagent.get(moviesUrl)
+    .then(result => {
+
+      console.log('----------------MOVIES!!!!!!----------------');
+      console.log(result.body.results);
+
+        const movieList = result.body.result.map(key => {
+        const movieItem = new (event, req.query.data.search_query);
+        const SQL = `INSERT INTO events (link, name, event_date, summary, location) VALUES ($1, $2, $3, $4, $5);`;
+        const values = [event.url, event.name.text, event.start.local, event.description.text, eventItem.location];
+        client.query(SQL, values);
+        return eventItem;
+      });
+      res.send(movieList);
     })
     .catch(error => handleError(error, res));
 }
