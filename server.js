@@ -24,6 +24,7 @@ app.get('/location', queryLocation);
 app.get('/weather', weatherApp);
 
 app.get('/events', eventsApp);
+app.get('/movies', getMoviesAPI);
 
 //uses google API to fetch coordinate data to send to front end using superagent
 //has a catch method to handle bad user search inputs in case google maps cannot
@@ -62,9 +63,9 @@ function queryTable(table, request, response) {
   let values = [request.query.data.search_query];
   return client.query(sql, values)
     .then(result => {
-      console.log(result);
+      //console.log(result);
       if (result.rowCount > 0) {
-        console.log(result.rowCount);
+        //console.log(result.rowCount);
         response.send(result.rows);
       } else {
         if (table === 'weathers') {
@@ -101,6 +102,11 @@ function getWeatherAPI(req, res) {
 function eventsApp(req, res) {
   queryTable('events', req, res);
 }
+/*
+function moviesApp(req, res){
+  queryTable('movies',req, res);
+}
+*/
 
 function getEventsAPI(req, res) {
   const eventBriteUrl = `https://www.eventbriteapi.com/v3/events/search/?location.within=10mi&location.latitude=${req.query.data.latitude}&location.longitude=${req.query.data.longitude}&token=${process.env.EVENTBRITE_API_KEY}`;
@@ -114,6 +120,27 @@ function getEventsAPI(req, res) {
         return eventItem;
       });
       res.send(eventSummaries);
+    })
+    .catch(error => handleError(error, res));
+}
+
+function getMoviesAPI(req, res) {
+  const moviesUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${req.query.data.search_query}`;
+
+  return superagent.get(moviesUrl)
+    .then(result => {
+      console.log('----------------INSIDE MOVIE REQUEST!!!!!-----------');
+      const movieList = result.body.results.map(movie => {
+        const movieItem = new Movie(movie);
+
+        const SQL = `INSERT INTO movies (title, overview, average_votes, total_votes, image_url, popularity, released_on) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+        const values = [movieItem.title, movieItem.overview, movieItem.average_votes, movieItem.total_votes, movieItem.image_url, movieItem.popularity, movieItem.released_on];
+
+        client.query(SQL, values);
+        return movieItem;
+      });
+      console.log(movieList);
+      res.send(movieList);
     })
     .catch(error => handleError(error, res));
 }
