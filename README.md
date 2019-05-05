@@ -55,7 +55,7 @@ Backend application using request/response cycle.
 
     Finish time: 1400
 
-    Actual time needed to complete: 2
+    Actual time needed to complete: 5
 
 ## Info on Cache Validation
 
