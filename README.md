@@ -11,9 +11,7 @@ Backend application to handle front send service requests for locations.
 
 ## Getting Started
 
-Deployed at:
-
-URL: 
+Deployed at: https://afternoon-brook-55677.herokuapp.com
 
 /location to return location input data in including latitude and longitude
 /weather to return weather location from data
