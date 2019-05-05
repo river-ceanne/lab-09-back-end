@@ -78,30 +78,37 @@ function queryTable(table, request, response) {
         }
         response.send(qryResult);
       } else {
-        callAPI(table, request, response);
+        return callAPI(table, request, response);
       }
     })
     .catch(error => handleError(error, response));
 }
 
 function refreshData(table,request,response){
-  console.log('-------REFRESHING DATA ------------');
+  console.log(`-------REFRESHING DATA OF ${table} ------------`);
   let sql = `DELETE FROM ${table} WHERE location = $1`;
   let values = [request.query.data.search_query];
   return client.query(sql,values)
-    .then(() => callAPI(table,request,response))
+    .then(result => {
+      console.log(result);
+      return callAPI(table,request,response);
+    })
     .catch(error => handleError(error, response));
 }
 
 function callAPI(table,request, response){
   switch(table){
   case 'weathers':
+    console.log('-------CALLING WEATHER API ------------');
     return getWeatherAPI(request, response);
   case 'events':
+    console.log('-------CALLING EVENTS API ------------');
     return getEventsAPI(request, response);
   case 'movies':
+    console.log('-------CALLING MOVIES API ------------');
     return getMoviesAPI(request,response);
   case 'yelps':
+    console.log('-------CALLING YELP API------------');
     return getYelpAPI(request,response);
   }
 
@@ -119,7 +126,7 @@ function getWeatherAPI(req, res) {
         client.query(SQL, values);
         return day;
       });
-      res.send(weatherSummaries);
+      return res.send(weatherSummaries);
     })
     .catch(error => handleError(error, res));
 }
@@ -151,7 +158,7 @@ function getEventsAPI(req, res) {
         client.query(SQL, values);
         return eventItem;
       });
-      res.send(eventSummaries);
+      return res.send(eventSummaries);
     })
     .catch(error => handleError(error, res));
 }
@@ -170,7 +177,7 @@ function getMoviesAPI(req, res) {
         client.query(SQL, values);
         return movieItem;
       });
-      res.send(movieList);
+      return res.send(movieList);
     })
     .catch(error => handleError(error, res));
 }
@@ -191,13 +198,13 @@ function getYelpAPI(req, res) {
         // console.log(yelpItem.name);
         return yelpItem;
       });
-      res.send(yelpList);
+      return res.send(yelpList);
     })
     .catch(error => handleError(error, res));
 }
 
 function handleError(err, res) {
-  if (res) res.status(500).send(`Internal 500 error! - Error is ${err}`);
+  res.send({ 'status': 500, 'responseText': `Sorry, something went wrong - Error was ${err}`});
 }
 
 function Weather(day, location) {
