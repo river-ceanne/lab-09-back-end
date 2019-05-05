@@ -20,9 +20,7 @@ app.get('/', (request, response) => {
 });
 
 app.get('/location', queryLocation);
-
 app.get('/weather', weatherApp);
-
 app.get('/events', eventsApp);
 app.get('/movies', moviesApp);
 app.get('/yelp', yelpApp);
@@ -32,6 +30,22 @@ app.get('/yelp', yelpApp);
 //find location
 
 let myLocation;
+
+function eventsApp(req, res) {
+  queryTable('events', req, res);
+}
+
+function weatherApp(req, res) {
+  queryTable('weathers', req, res);
+}
+
+function moviesApp(req,res){
+  queryTable('movies', req, res);
+}
+
+function yelpApp(req,res){
+  queryTable('yelps', req, res);
+}
 
 function locationApp(request, response) {
   const googleMapsUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODE_API_KEY}`;
@@ -75,8 +89,9 @@ function queryTable(table, request, response) {
         console.log(Date.now() - dateOnDB);
         if(Date.now() - dateOnDB > cacheTimes[table]){
           refreshData(table,request,response);
+        }else{
+          response.send(qryResult);
         }
-        response.send(qryResult);
       } else {
         return callAPI(table, request, response);
       }
@@ -90,7 +105,7 @@ function refreshData(table,request,response){
   let values = [request.query.data.search_query];
   return client.query(sql,values)
     .then(result => {
-      console.log(result);
+      console.log(`${table} `,result);
       return callAPI(table,request,response);
     })
     .catch(error => handleError(error, response));
@@ -115,6 +130,7 @@ function callAPI(table,request, response){
 }
 
 function getWeatherAPI(req, res) {
+  console.log('-------INSIDE WEATHER API CALL FUNCTION------------');
   const darkSkyUrl = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
   return superagent.get(darkSkyUrl)
     .then(result => {
@@ -126,28 +142,13 @@ function getWeatherAPI(req, res) {
         client.query(SQL, values);
         return day;
       });
-      return res.send(weatherSummaries);
+      res.send(weatherSummaries);
     })
     .catch(error => handleError(error, res));
 }
 
-function eventsApp(req, res) {
-  queryTable('events', req, res);
-}
-
-function weatherApp(req, res) {
-  queryTable('weathers', req, res);
-}
-
-function moviesApp(req,res){
-  queryTable('movies', req, res);
-}
-
-function yelpApp(req,res){
-  queryTable('yelps', req, res);
-}
-
 function getEventsAPI(req, res) {
+  console.log('-------INSIDE EVENTS API CALL FUNCTION------------');
   const eventBriteUrl = `https://www.eventbriteapi.com/v3/events/search/?location.within=10mi&location.latitude=${req.query.data.latitude}&location.longitude=${req.query.data.longitude}&token=${process.env.EVENTBRITE_API_KEY}`;
   return superagent.get(eventBriteUrl)
     .then(result => {
@@ -158,12 +159,13 @@ function getEventsAPI(req, res) {
         client.query(SQL, values);
         return eventItem;
       });
-      return res.send(eventSummaries);
+      res.send(eventSummaries);
     })
     .catch(error => handleError(error, res));
 }
 
 function getMoviesAPI(req, res) {
+  console.log('-------INSIDE MOVIES API CALL FUNCTION------------');
   const moviesUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${req.query.data.search_query}`;
 
   return superagent.get(moviesUrl)
@@ -177,12 +179,13 @@ function getMoviesAPI(req, res) {
         client.query(SQL, values);
         return movieItem;
       });
-      return res.send(movieList);
+      res.send(movieList);
     })
     .catch(error => handleError(error, res));
 }
 
 function getYelpAPI(req, res) {
+  console.log('-------INSIDE YELP API CALL FUNCTION------------');
   const yelpUrl = `https://api.yelp.com/v3/businesses/search?latitude=${req.query.data.latitude}&longitude=${req.query.data.longitude}`;
 
   return superagent.get(yelpUrl)
@@ -198,7 +201,7 @@ function getYelpAPI(req, res) {
         // console.log(yelpItem.name);
         return yelpItem;
       });
-      return res.send(yelpList);
+      res.send(yelpList);
     })
     .catch(error => handleError(error, res));
 }
