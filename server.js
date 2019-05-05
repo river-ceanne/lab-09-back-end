@@ -20,18 +20,32 @@ app.get('/', (request, response) => {
 });
 
 app.get('/location', queryLocation);
-
 app.get('/weather', weatherApp);
-
 app.get('/events', eventsApp);
-app.get('/movies', getMoviesAPI);
-app.get('/yelp', getYelpAPI);
+app.get('/movies', moviesApp);
+app.get('/yelp', yelpApp);
 
 //uses google API to fetch coordinate data to send to front end using superagent
 //has a catch method to handle bad user search inputs in case google maps cannot
 //find location
 
 let myLocation;
+
+function eventsApp(req, res) {
+  queryTable('events', req, res);
+}
+
+function weatherApp(req, res) {
+  queryTable('weathers', req, res);
+}
+
+function moviesApp(req,res){
+  queryTable('movies', req, res);
+}
+
+function yelpApp(req,res){
+  queryTable('yelps', req, res);
+}
 
 function locationApp(request, response) {
   const googleMapsUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${request.query.data}&key=${process.env.GEOCODE_API_KEY}`;
@@ -41,7 +55,6 @@ function locationApp(request, response) {
       let insertSQL = 'INSERT INTO locations ( search_query, formatted_query, latitude, longitude, created_at) VALUES ( $1, $2, $3, $4, $5);';
       let insertParams = [myLocation.search_query, myLocation.formatted_query, myLocation.latitude, myLocation.longitude, myLocation.created_at];
       client.query(insertSQL, insertParams);
-      // return location;
       response.send(myLocation);
     })
     .catch(error => handleError(error, response));
@@ -54,11 +67,7 @@ function queryLocation(request, response) {
   return client.query(sql, params)
     .then(result => {
       if (result.rowCount > 0) {
-        let qryResult = result.rows[0];
-        myLocation = new Location();
-        myLocation.latitude = qryResult.latitude;
-        myLocation.longitude = qryResult.longitude;
-        response.send(qryResult);
+        response.send(result.rows[0]);
       } else {
         locationApp(request, response);
       }
@@ -72,24 +81,56 @@ function queryTable(table, request, response) {
   return client.query(sql, values)
     .then(result => {
       //console.log(result);
+      console.log(`${table} # rows are `, result.rowCount);
       if (result.rowCount > 0) {
-        response.send(result.rows);
-      } else {
-        if (table === 'weathers') {
-          getWeatherAPI(request, response);
-        } else if (table === 'events') {
-          getEventsAPI(request, response);
+        let qryResult = result.rows;
+        let dateOnDB = qryResult[0].created_at;
+        console.log(qryResult[0].created_at);
+        console.log(Date.now() - dateOnDB);
+        if(Date.now() - dateOnDB > cacheTimes[table]){
+          refreshData(table,request,response);
+        }else{
+          response.send(qryResult);
         }
+      } else {
+        return callAPI(table, request, response);
       }
     })
     .catch(error => handleError(error, response));
 }
 
-function weatherApp(req, res) {
-  queryTable('weathers', req, res);
+function refreshData(table,request,response){
+  console.log(`-------REFRESHING DATA OF ${table} ------------`);
+  let sql = `DELETE FROM ${table} WHERE location = $1`;
+  let values = [request.query.data.search_query];
+  return client.query(sql,values)
+    .then(result => {
+      console.log(`${table} `,result);
+      return callAPI(table,request,response);
+    })
+    .catch(error => handleError(error, response));
+}
+
+function callAPI(table,request, response){
+  switch(table){
+  case 'weathers':
+    console.log('-------CALLING WEATHER API ------------');
+    return getWeatherAPI(request, response);
+  case 'events':
+    console.log('-------CALLING EVENTS API ------------');
+    return getEventsAPI(request, response);
+  case 'movies':
+    console.log('-------CALLING MOVIES API ------------');
+    return getMoviesAPI(request,response);
+  case 'yelps':
+    console.log('-------CALLING YELP API------------');
+    return getYelpAPI(request,response);
+  }
+
 }
 
 function getWeatherAPI(req, res) {
+  console.log('-------INSIDE WEATHER API CALL FUNCTION------------');
   const darkSkyUrl = `https://api.darksky.net/forecast/${process.env.WEATHER_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
   return superagent.get(darkSkyUrl)
     .then(result => {
@@ -106,11 +147,8 @@ function getWeatherAPI(req, res) {
     .catch(error => handleError(error, res));
 }
 
-function eventsApp(req, res) {
-  queryTable('events', req, res);
-}
-
 function getEventsAPI(req, res) {
+  console.log('-------INSIDE EVENTS API CALL FUNCTION------------');
   const eventBriteUrl = `https://www.eventbriteapi.com/v3/events/search/?location.within=10mi&location.latitude=${req.query.data.latitude}&location.longitude=${req.query.data.longitude}&token=${process.env.EVENTBRITE_API_KEY}`;
   return superagent.get(eventBriteUrl)
     .then(result => {
@@ -127,6 +165,7 @@ function getEventsAPI(req, res) {
 }
 
 function getMoviesAPI(req, res) {
+  console.log('-------INSIDE MOVIES API CALL FUNCTION------------');
   const moviesUrl = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&query=${req.query.data.search_query}`;
 
   return superagent.get(moviesUrl)
@@ -146,16 +185,17 @@ function getMoviesAPI(req, res) {
 }
 
 function getYelpAPI(req, res) {
+  console.log('-------INSIDE YELP API CALL FUNCTION------------');
   const yelpUrl = `https://api.yelp.com/v3/businesses/search?latitude=${req.query.data.latitude}&longitude=${req.query.data.longitude}`;
 
   return superagent.get(yelpUrl)
     .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
     .then(result => {
       const yelpList = result.body.businesses.map(yelp => {
-        const yelpItem = new Yelp(yelp);
+        const yelpItem = new Yelp(yelp,req.query.data.search_query);
 
-        const SQL = `INSERT INTO yelps (name, image_url, price, rating, url, created_at) VALUES ($1, $2, $3, $4, $5, $6);`;
-        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at];
+        const SQL = `INSERT INTO yelps (name, image_url, price, rating, url, created_at, location) VALUES ($1, $2, $3, $4, $5, $6, $7);`;
+        const values = [yelpItem.name, yelpItem.image_url, yelpItem.price, yelpItem.rating, yelpItem.url, yelpItem.created_at, yelpItem.location];
 
         client.query(SQL, values);
         // console.log(yelpItem.name);
@@ -167,7 +207,7 @@ function getYelpAPI(req, res) {
 }
 
 function handleError(err, res) {
-  if (res) res.status(500).send(`Internal 500 error! - Error is ${err}`);
+  res.send({ 'status': 500, 'responseText': `Sorry, something went wrong - Error was ${err}`});
 }
 
 function Weather(day, location) {
@@ -215,5 +255,13 @@ function Yelp(yelp, location){
   this.created_at = Date.now();
   this.location = location;
 }
+
+const cacheTimes = {
+  weathers: 20 * 1000,
+  locations: 60 * 1000,
+  events: 40 * 1000,
+  movies: 50 * 1000,
+  yelp: 30 * 1000
+};
 
 app.listen(PORT, () => console.log(`Listening on ${PORT}`));
